@@ -64,7 +64,7 @@ async def calculate_ashtakavarga(request: AshtakavargaRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/horoscope/complete")
+@router.post("/complete")
 async def generate_complete_horoscope(request: HoroscopeRequest):
     """
     Generate comprehensive horoscope report

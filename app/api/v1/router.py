@@ -2,7 +2,10 @@
 API Router
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import chart, dasha, panchang, divisional, kp, matching, yogas, horoscope, daily_horoscope
+from app.api.v1.endpoints import (
+    chart, dasha, panchang, divisional, kp, matching, yogas, horoscope, 
+    daily_horoscope, kundli, kundli_matching
+)
 
 api_router = APIRouter()
 
@@ -16,3 +19,7 @@ api_router.include_router(matching.router, prefix="/matching", tags=["Matching"]
 api_router.include_router(yogas.router, prefix="/yogas", tags=["Yogas & Doshas"])
 api_router.include_router(horoscope.router, prefix="/horoscope", tags=["Horoscope & Ashtakavarga"])
 api_router.include_router(daily_horoscope.router, prefix="/horoscope", tags=["Daily/Weekly/Monthly/Yearly Horoscope"])
+
+# NEW: Enhanced Kundli endpoints (AstroTalk-level detail)
+api_router.include_router(kundli.router, prefix="/kundli", tags=["Kundli - Complete Analysis"])
+api_router.include_router(kundli_matching.router, prefix="/kundli-matching", tags=["Kundli Matching - Comprehensive"])

@@ -10,6 +10,8 @@ from app.core.vedic.yogas_doshas import yoga_dosha_calculator
 router = APIRouter()
 
 
+@router.post("")
+@router.post("/")
 @router.post("/analyze")
 async def analyze_yogas_doshas(request: YogasRequest):
     """

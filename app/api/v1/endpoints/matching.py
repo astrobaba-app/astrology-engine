@@ -6,6 +6,7 @@ from datetime import datetime
 from app.api.v1.models import MatchingRequest
 from app.core.chart_engine import chart_engine
 from app.core.matching.ashtakoot import ashtakoot_matching
+from app.core.matching.dashakoot import dashakoot_matching
 from app.core.vedic.yogas_doshas import yoga_dosha_calculator
 
 router = APIRouter()
@@ -60,6 +61,18 @@ async def calculate_ashtakoot_matching(request: MatchingRequest):
             female_nakshatra_num=female_moon['nakshatra_num']
         )
         
+        # Also calculate Dashakoot (10-Kuta)
+        dashakoot = dashakoot_matching.calculate_dashakoot_matching(
+            male_moon_sign=male_moon['sign'],
+            male_moon_sign_num=male_moon['sign_num'],
+            male_nakshatra=male_moon['nakshatra'],
+            male_nakshatra_num=male_moon['nakshatra_num'],
+            female_moon_sign=female_moon['sign'],
+            female_moon_sign_num=female_moon['sign_num'],
+            female_nakshatra=female_moon['nakshatra'],
+            female_nakshatra_num=female_moon['nakshatra_num']
+        )
+        
         # Check Mangal Dosha for both
         male_mangal = yoga_dosha_calculator.detect_mangal_dosha(
             male_chart['planets'],
@@ -76,6 +89,7 @@ async def calculate_ashtakoot_matching(request: MatchingRequest):
             "male_name": male_data.name,
             "female_name": female_data.name,
             "ashtakoot_matching": matching,
+            "dashakoot_matching": dashakoot,
             "male_mangal_dosha": male_mangal,
             "female_mangal_dosha": female_mangal
         }

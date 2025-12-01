@@ -9,6 +9,7 @@ from app.core.vedic.panchang import panchang_calculator
 router = APIRouter()
 
 
+@router.post("")
 @router.post("/")
 async def calculate_panchang(request: PanchangRequest):
     """
