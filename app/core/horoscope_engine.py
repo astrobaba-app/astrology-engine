@@ -14,7 +14,7 @@ class HoroscopeEngine:
         yogas_doshas: Dict,
         dashas: Dict,
         divisional_charts: Dict,
-        ashtakavarga: Dict = None
+        ashtakavarga: Dict = None,
     ) -> Dict:
         """
         Generate comprehensive birth horoscope report
@@ -49,6 +49,11 @@ class HoroscopeEngine:
         
         if ashtakavarga:
             report['ashtakavarga_insights'] = self._format_ashtakavarga(ashtakavarga)
+
+        # Add numerology based on birth details
+        numerology = self._calculate_numerology(chart_data.get('birth_details', {}))
+        if numerology:
+            report['numerology'] = numerology
         
         return report
     
@@ -493,6 +498,79 @@ class HoroscopeEngine:
     
     def _format_ashtakavarga(self, ashtak: Dict) -> Dict:
         return {"summary": "Ashtakavarga analysis included"}
+
+    def _calculate_numerology(self, birth_details: Dict) -> Dict:
+        """Calculate basic numerology (radical, destiny, name numbers and derived fields)."""
+        date_str = birth_details.get('date')
+        if not date_str:
+            return {}
+
+        try:
+            dt = datetime.fromisoformat(date_str)
+        except Exception:
+            return {}
+
+        def reduce_number(n: int) -> int:
+            total = sum(int(d) for d in str(abs(n)) if d.isdigit())
+            while total > 9:
+                total = sum(int(d) for d in str(total))
+            return total or 0
+
+        day = dt.day
+        month = dt.month
+        year = dt.year
+
+        radical_number = reduce_number(day)
+        destiny_number = reduce_number(int(f"{day:02d}{month:02d}{year}"))
+
+        # Simple name number based on letters if a name is present in birth_details
+        name = birth_details.get('name', 'Native')
+        def name_to_number(name_str: str) -> int:
+            mapping = {ch: (idx % 9) + 1 for idx, ch in enumerate('ABCDEFGHIJKLMNOPQRSTUVWXYZ')}
+            total = 0
+            for ch in name_str.upper():
+                if ch in mapping:
+                    total += mapping[ch]
+            return reduce_number(total) if total > 0 else 0
+
+        name_number = name_to_number(name)
+
+        # Derive friendly / neutral / evil numbers in a simple consistent way
+        friendly_number = radical_number or destiny_number
+        neutral_number = destiny_number if destiny_number != friendly_number else ((destiny_number % 9) + 1)
+        evil_number = ((friendly_number + 4 - 1) % 9) + 1 if friendly_number else 8
+
+        # Map numbers to basic attributes
+        num_map = {
+            1: {"day": "Sunday", "color": "Red", "metal": "Gold", "ruler": "Sun", "stone": "Ruby"},
+            2: {"day": "Monday", "color": "White", "metal": "Silver", "ruler": "Moon", "stone": "Pearl"},
+            3: {"day": "Thursday", "color": "Yellow", "metal": "Gold", "ruler": "Jupiter", "stone": "Yellow Sapphire"},
+            4: {"day": "Sunday", "color": "Brown", "metal": "Iron", "ruler": "Rahu", "stone": "Hessonite"},
+            5: {"day": "Wednesday", "color": "Green", "metal": "Bronze", "ruler": "Mercury", "stone": "Emerald"},
+            6: {"day": "Friday", "color": "Pink", "metal": "Silver", "ruler": "Venus", "stone": "Diamond"},
+            7: {"day": "Saturday", "color": "Blue", "metal": "Iron", "ruler": "Ketu", "stone": "Cat's Eye"},
+            8: {"day": "Saturday", "color": "Dark Blue", "metal": "Iron", "ruler": "Saturn", "stone": "Blue Sapphire"},
+            9: {"day": "Tuesday", "color": "Red", "metal": "Copper", "ruler": "Mars", "stone": "Red Coral"},
+        }
+
+        attrs = num_map.get(radical_number or destiny_number, {})
+
+        return {
+            'radicalNumber': radical_number,
+            'destinyNumber': destiny_number,
+            'nameNumber': name_number,
+            'friendlyNumber': friendly_number,
+            'neutralNumber': neutral_number,
+            'evilNumber': evil_number,
+            'luckyDay': attrs.get('day'),
+            'luckyColor': attrs.get('color'),
+            'luckyMetal': attrs.get('metal'),
+            'luckyStone': attrs.get('stone'),
+            'luckySubstone': attrs.get('stone'),
+            'luckyGod': attrs.get('ruler'),
+            'luckyMantra': 'Chant planetary mantra regularly',
+            'radicalRuler': attrs.get('ruler'),
+        }
 
 
 # Global instance

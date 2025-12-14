@@ -58,6 +58,86 @@ class DashaCalculator:
         'Saturn',  # 25: Uttara Bhadrapada
         'Mercury'  # 26: Revati
     ]
+
+    def get_mahadasha_description(self, planet: str) -> str:
+        """Return a generic interpretive description for a Mahadasha lord.
+
+        This mirrors the logic used in the frontend Dasha tab so that
+        descriptions are available directly from the astro-engine.
+        """
+        if not planet:
+            return (
+                "This Mahadasha period brings results according to the planet's "
+                "strength, sign and house placement in the birth chart."
+            )
+
+        key = planet.strip()
+
+        base_descriptions = {
+            'Ketu': (
+                "Ketu Mahadasha often brings detachment, spiritual growth, sudden "
+                "separations and strong inner experiences. It can disconnect a "
+                "person from material attachments so that focus shifts more toward "
+                "inner peace, intuition and past‑life karmas."
+            ),
+            'Venus': (
+                "Venus Mahadasha is a period of relationships, comforts, luxuries, "
+                "beauty and creativity. It can enhance love life, partnerships and "
+                "artistic talents, but may also increase indulgence or attachment "
+                "to pleasure if Venus is weak."
+            ),
+            'Sun': (
+                "Sun Mahadasha highlights authority, self‑expression, ego, father "
+                "figures and career recognition. It can bring leadership "
+                "opportunities and visibility, but also ego clashes or health "
+                "strain if the Sun is afflicted."
+            ),
+            'Moon': (
+                "Moon Mahadasha is strongly emotional and mental. It influences "
+                "peace of mind, mother, home, fluids and public popularity. This "
+                "period can make a person more sensitive and intuitive, but also "
+                "prone to mood swings if the Moon is weak."
+            ),
+            'Mars': (
+                "Mars Mahadasha activates courage, energy, ambition, competition "
+                "and aggression. It can support bold actions, sports and technical "
+                "pursuits, yet may also bring conflicts, injuries or impulsive "
+                "decisions when not handled wisely."
+            ),
+            'Rahu': (
+                "Rahu Mahadasha often brings sudden events, foreign connections, "
+                "unconventional paths and strong material desires. It can give "
+                "rapid rise and worldly gains, but also confusion, obsessions or "
+                "scandals if not guided properly."
+            ),
+            'Jupiter': (
+                "Jupiter Mahadasha is usually considered benefic, supporting "
+                "wisdom, education, wealth, children, dharma and protection. It "
+                "can open doors for growth and blessings, depending on Jupiter's "
+                "strength and house placement."
+            ),
+            'Saturn': (
+                "Saturn Mahadasha emphasizes discipline, responsibilities, hard "
+                "work, delays and karmic lessons. It can be demanding but "
+                "ultimately stabilising, rewarding consistent effort and maturity "
+                "over time."
+            ),
+            'Mercury': (
+                "Mercury Mahadasha focuses on intellect, communication, business, "
+                "networking and analytical ability. It supports studies, trade, "
+                "writing and negotiations, but may bring restlessness or "
+                "overthinking if Mercury is weak."
+            ),
+        }
+
+        if key in base_descriptions:
+            return base_descriptions[key]
+
+        return (
+            f"This Mahadasha period is governed by {key}, and its results "
+            f"will depend on how {key} is placed and aspected in the "
+            "horoscope."
+        )
     
     def get_moon_nakshatra(self, moon_longitude: float) -> Tuple[int, str, float]:
         """
@@ -123,7 +203,8 @@ class DashaCalculator:
             'start_date': current_date.strftime('%Y-%m-%d'),
             'end_date': end_date.strftime('%Y-%m-%d'),
             'years': round(balance_years, 2),
-            'is_balance': True
+            'is_balance': True,
+            'description': self.get_mahadasha_description(birth_dasha_lord),
         })
         current_date = end_date
         
@@ -146,7 +227,8 @@ class DashaCalculator:
                 'start_date': current_date.strftime('%Y-%m-%d'),
                 'end_date': end_date.strftime('%Y-%m-%d'),
                 'years': round(period_years, 2),
-                'is_balance': False
+                'is_balance': False,
+                'description': self.get_mahadasha_description(planet),
             })
             
             current_date = end_date

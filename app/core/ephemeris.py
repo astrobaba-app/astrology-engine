@@ -4,7 +4,7 @@ Swiss Ephemeris wrapper for astronomical calculations
 import swisseph as swe
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
-import pytz
+from zoneinfo import ZoneInfo
 from app.config import settings
 
 
@@ -64,9 +64,9 @@ class SwissEphemeris:
     ) -> float:
         """Convert datetime to Julian Day (UT)"""
         if timezone:
-            tz = pytz.timezone(timezone)
-            dt = tz.localize(dt) if dt.tzinfo is None else dt
-            dt = dt.astimezone(pytz.UTC)
+            tz = ZoneInfo(timezone)
+            dt = dt.replace(tzinfo=tz) if dt.tzinfo is None else dt.astimezone(tz)
+            dt = dt.astimezone(ZoneInfo("UTC"))
         
         jd = swe.julday(
             dt.year, 
@@ -149,8 +149,79 @@ class SwissEphemeris:
         positions = {}
         for planet in planets_to_calc:
             positions[planet] = self.get_planet_position(planet, jd)
-        
+        # Enhance planetary data with combustion and avastha information
+        self._apply_combustion(positions)
+        self._apply_avastha(positions)
+
         return positions
+
+    def _apply_combustion(self, positions: Dict[str, Dict]) -> None:
+        """Annotate planets with combustion status based on proximity to Sun.
+
+        This uses simplified Vedic orbs (in degrees) for combustion. The
+        calculation is geometric: minimum angular distance from the Sun on the
+        zodiac circle.
+        """
+        if 'Sun' not in positions:
+            return
+
+        sun_long = positions['Sun']['longitude']
+
+        # Maximum distance (orb) for combustion per planet (in degrees)
+        combustion_orbs = {
+            'Moon': 12.0,
+            'Mars': 17.0,
+            'Mercury': 14.0,
+            'Jupiter': 11.0,
+            'Venus': 10.0,
+            'Saturn': 15.0,
+        }
+
+        # Default value for all planets
+        for pdata in positions.values():
+            pdata.setdefault('is_combust', False)
+
+        for planet_name, max_orb in combustion_orbs.items():
+            pdata = positions.get(planet_name)
+            if not pdata:
+                continue
+
+            diff = abs(pdata['longitude'] - sun_long)
+            if diff > 180:
+                diff = 360 - diff
+
+            is_combust = diff <= max_orb
+            pdata['is_combust'] = is_combust
+            pdata['combust_orb'] = round(diff, 2)
+
+    def _apply_avastha(self, positions: Dict[str, Dict]) -> None:
+        """Annotate planets with a simple Balaadi Avastha based on sign degree.
+
+        This is an approximate scheme used for UI display only:
+        0-6°   -> Bala (Infant)
+        6-12°  -> Kumara (Youthful)
+        12-18° -> Yuva (Adult)
+        18-24° -> Vriddha (Mature)
+        24-30° -> Mrita (Old)
+        """
+        for pdata in positions.values():
+            degree = pdata.get('sign_degree')
+            if degree is None:
+                pdata.setdefault('avastha', None)
+                continue
+
+            if degree < 6:
+                state = 'Bala'
+            elif degree < 12:
+                state = 'Kumara'
+            elif degree < 18:
+                state = 'Yuva'
+            elif degree < 24:
+                state = 'Vriddha'
+            else:
+                state = 'Mrita'
+
+            pdata['avastha'] = state
     
     def get_houses(
         self, 

@@ -3,7 +3,7 @@ Panchang (Vedic Calendar) Calculator
 """
 from datetime import datetime, time, timedelta
 from typing import Dict, List
-import pytz
+from zoneinfo import ZoneInfo
 from app.core.ephemeris import ephemeris
 
 
@@ -103,13 +103,17 @@ class PanchangCalculator:
         # Nakshatra lord
         lords = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury']
         lord = lords[nakshatra_num % 9]
+
+        # Additional descriptive attributes for UI (tatva, paya, varna, yoni, gan, nadi, vashya)
+        attrs = self._get_nakshatra_attributes(nakshatra_num)
         
         return {
             'number': nakshatra_num + 1,
             'name': self.NAKSHATRAS[nakshatra_num],
             'pada': pada,
             'lord': lord,
-            'progress_percent': round(nakshatra_progress, 2)
+            'progress_percent': round(nakshatra_progress, 2),
+            **attrs,
         }
     
     def calculate_yoga(self, sun_long: float, moon_long: float) -> Dict:
@@ -288,8 +292,8 @@ class PanchangCalculator:
         """Calculate sunrise time (simplified)"""
         # Combine date with approximate sunrise time (6 AM)
         sunrise_guess = datetime.combine(date.date(), time(6, 0))
-        tz = pytz.timezone(timezone)
-        sunrise_guess = tz.localize(sunrise_guess)
+        # Attach timezone using standard library ZoneInfo
+        sunrise_guess = sunrise_guess.replace(tzinfo=ZoneInfo(timezone))
         
         # For production, use more accurate calculation
         # This is a placeholder - actual calculation would use Swiss Ephemeris
@@ -305,9 +309,9 @@ class PanchangCalculator:
         """Calculate sunset time (simplified)"""
         # Combine date with approximate sunset time (6 PM)
         sunset_guess = datetime.combine(date.date(), time(18, 0))
-        tz = pytz.timezone(timezone)
-        sunset_guess = tz.localize(sunset_guess)
-        
+        # Attach timezone using standard library ZoneInfo
+        sunset_guess = sunset_guess.replace(tzinfo=ZoneInfo(timezone))
+
         # For production, use more accurate calculation
         return sunset_guess
     
@@ -376,6 +380,37 @@ class PanchangCalculator:
                 'sign': moon['sign'],
                 'nakshatra': moon['nakshatra']
             }
+        }
+
+    def _get_nakshatra_attributes(self, nakshatra_index: int) -> Dict:
+        """Return additional descriptive attributes for a nakshatra.
+
+        These are lightweight, UI-focused classifications (elements, temperament etc.)
+        derived from the nakshatra index in a simple cyclic way.
+        """
+        # Five-element cycle
+        tatva_cycle = ['Fire', 'Earth', 'Air', 'Water', 'Space']
+        # Simple prosperity cycle
+        paya_cycle = ['Cow', 'Horse', 'Elephant']
+        # Four broad temperaments (kept neutral, non-social)
+        varna_cycle = ['Spiritual', 'Royal', 'Practical', 'Supportive']
+        # Basic temperament / instinct cycle
+        yoni_cycle = ['Horse', 'Elephant', 'Sheep', 'Snake', 'Dog', 'Cat', 'Rat', 'Cow', 'Buffalo']
+        # Gana (deity/human/dynamic) cycle
+        gan_cycle = ['Deva', 'Manushya', 'Rakshasa']
+        # Nadi (energy flow) cycle
+        nadi_cycle = ['Adi', 'Madhya', 'Antya']
+        # Vashya (disposition) cycle
+        vashya_cycle = ['Chara', 'Sthira', 'Dual', 'Chatushpada', 'Keeta']
+
+        return {
+            'tatva': tatva_cycle[nakshatra_index % len(tatva_cycle)],
+            'paya': paya_cycle[nakshatra_index % len(paya_cycle)],
+            'varna': varna_cycle[nakshatra_index % len(varna_cycle)],
+            'yoni': yoni_cycle[nakshatra_index % len(yoni_cycle)],
+            'gan': gan_cycle[nakshatra_index % len(gan_cycle)],
+            'nadi': nadi_cycle[nakshatra_index % len(nadi_cycle)],
+            'vashya': vashya_cycle[nakshatra_index % len(vashya_cycle)],
         }
 
 

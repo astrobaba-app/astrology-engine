@@ -365,6 +365,170 @@ class RemediesEngine:
             ]
         }
 
+    def get_personalized_remedies(
+        self,
+        chart_data: Dict,
+        yogas_doshas: Dict,
+        ashtakavarga: Dict = None
+    ) -> Dict:
+        """Return remedies formatted for the Free Report (Rudraksha & Gemstones).
+
+        This adapts the internal recommendations into the response shape
+        documented in the frontend KUNDLI_API_DOCUMENTATION.
+        """
+        strengths = chart_data.get('strengths', {}) or {}
+        planet_houses = chart_data.get('planet_houses', {}) or {}
+        doshas = (yogas_doshas or {}).get('doshas', {}) or {}
+
+        comprehensive = self.generate_comprehensive_remedies(
+            strengths=strengths,
+            planet_houses=planet_houses,
+            doshas=doshas,
+        )
+
+        gemstone_recs = comprehensive.get('gemstones', []) or []
+
+        # If no specific weak-planet gemstones are found, create
+        # a gentle generic set so the UI is never empty.
+        if not gemstone_recs:
+            fallback_planets = ['Sun', 'Moon', 'Jupiter']
+            for planet in fallback_planets:
+                gem_info = self.GEMSTONES.get(planet)
+                if not gem_info:
+                    continue
+                gemstone_recs.append({
+                    'planet': planet,
+                    'reason': f'General strengthening recommendation for {planet}.',
+                    'gemstone': gem_info['primary'],
+                    'alternatives': gem_info['substitute'],
+                    'weight': gem_info['weight'],
+                    'finger': gem_info['finger'],
+                    'wearing_day': gem_info['day'],
+                    'wearing_time': gem_info['time'],
+                    'metal': 'Gold' if planet in ['Sun', 'Jupiter', 'Mars'] else 'Silver',
+                })
+
+        def _build_gem_detail(rec: Dict, label: str) -> Dict:
+            if not rec:
+                return {}
+
+            planet = rec.get('planet')
+            stone_name = rec.get('gemstone') or ''
+            metal = rec.get('metal') or 'metal'
+            wearing_day = rec.get('wearing_day') or 'an auspicious day'
+            finger = rec.get('finger') or 'appropriate finger'
+
+            title_parts = [label]
+            if planet:
+                title_parts.append(f"for {planet}")
+
+            mantra = ''
+            if planet in self.MANTRAS:
+                mantra = self.MANTRAS[planet]['mantra']
+
+            return {
+                'title': ' '.join(title_parts),
+                'description': rec.get('reason') or '',
+                'stone_name': stone_name,
+                'how_to_wear': (
+                    f"Wear on {wearing_day} in {metal} on the {finger}."
+                ),
+                'mantra': mantra,
+            }
+
+        life_stone = _build_gem_detail(gemstone_recs[0], 'Life stone') if len(gemstone_recs) > 0 else {}
+        lucky_stone = _build_gem_detail(gemstone_recs[1], 'Lucky stone') if len(gemstone_recs) > 1 else {}
+        fortune_stone = _build_gem_detail(gemstone_recs[2], 'Fortune stone') if len(gemstone_recs) > 2 else {}
+
+        gemstones_section: Dict = {
+            'primary': life_stone.get('stone_name') or None,
+            'secondary': lucky_stone.get('stone_name') or None,
+            'description': (
+                'Gemstone remedies suggested based on weak and afflicted '
+                'planets in the birth chart.'
+            ),
+        }
+
+        if life_stone:
+            gemstones_section['life_stone'] = life_stone
+        if lucky_stone:
+            gemstones_section['lucky_stone'] = lucky_stone
+        if fortune_stone:
+            gemstones_section['fortune_stone'] = fortune_stone
+
+        # Rudraksha section – provide a generic but informative report.
+        asc_sign = chart_data.get('ascendant', {}).get('sign') or 'your ascendant sign'
+
+        rudraksha_section: Dict = {
+            'suggested': ['4-Mukhi', '5-Mukhi'],
+            'suggestion_report': (
+                'This Rudraksha suggestion is based on the overall strength '
+                'of planets and doshas seen in your horoscope. Wearing these '
+                'beads helps balance mental, emotional and spiritual energy.'
+            ),
+            'importance': (
+                'Rudraksha beads are considered sacred seeds associated with '
+                'Lord Shiva. They are traditionally used to stabilise the mind, '
+                'reduce stress and support spiritual growth.'
+            ),
+            'recommendation': (
+                f'For {asc_sign} natives, 4-Mukhi and 5-Mukhi Rudraksha are '
+                'generally safe and supportive options when energised and worn '
+                'under proper guidance.'
+            ),
+            'mukhi_details': {
+                '4-Mukhi': {
+                    'details': (
+                        '4-Mukhi Rudraksha is associated with knowledge, speech '
+                        'and confidence. It helps improve communication and '
+                        'self-expression.'
+                    ),
+                    'benefits': [
+                        'Enhances clarity of thought and learning ability',
+                        'Supports better communication and public speaking',
+                        'Helps reduce overthinking and confusion',
+                    ],
+                    'how_to_wear': (
+                        'Wear on a Thursday or an auspicious day in a clean '
+                        'state of mind, preferably after chanting the relevant '
+                        'mantra and taking blessings of elders.'
+                    ),
+                    'precautions': [
+                        'Avoid wearing broken or cracked beads',
+                        'Remove before entering impure places when possible',
+                        'Keep the bead clean and energise it periodically',
+                    ],
+                },
+                '5-Mukhi': {
+                    'details': (
+                        '5-Mukhi Rudraksha is widely worn for general peace, '
+                        'good health and protection. It is suitable for most '
+                        'people and daily use.'
+                    ),
+                    'benefits': [
+                        'Promotes calmness and emotional stability',
+                        'Helps reduce stress and anxiety',
+                        'Supports spiritual practices like japa and meditation',
+                    ],
+                    'how_to_wear': (
+                        'Wear on a Monday or an auspicious day after chanting '
+                        '“Om Namah Shivaya” or your personal mantra. Keep it '
+                        'close to the heart region if possible.'
+                    ),
+                    'precautions': [
+                        'Do not wear very old or damaged beads',
+                        'Avoid sharing your personal Rudraksha with others',
+                        'Handle with respect and keep it in a clean place',
+                    ],
+                },
+            },
+        }
+
+        return {
+            'rudraksha': rudraksha_section,
+            'gemstones': gemstones_section,
+        }
+
 
 # Global instance
 remedies_engine = RemediesEngine()

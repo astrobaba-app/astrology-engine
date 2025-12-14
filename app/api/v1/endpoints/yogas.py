@@ -32,11 +32,12 @@ async def analyze_yogas_doshas(request: YogasRequest):
             timezone=birth_data.timezone
         )
         
-        # Analyze yogas and doshas
+        # Analyze yogas, doshas and sadesati
         analysis = yoga_dosha_calculator.analyze_all_yogas_doshas(
             planets=chart['planets'],
             planet_houses=chart['planet_houses'],
-            houses=chart['houses']
+            houses=chart['houses'],
+            birth_datetime=birth_datetime,
         )
         
         return {

@@ -10,6 +10,7 @@ from app.core.vedic.yogas_doshas import yoga_dosha_calculator
 from app.core.vedic.dasha import dasha_calculator
 from app.core.vedic.divisional_charts import divisional_charts
 from app.core.horoscope_engine import horoscope_engine
+from app.core.remedies import remedies_engine
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -84,11 +85,12 @@ async def generate_complete_horoscope(request: HoroscopeRequest):
             timezone=birth_data.timezone
         )
         
-        # Get yogas and doshas
+        # Get yogas, doshas and sadesati
         yogas_doshas = yoga_dosha_calculator.analyze_all_yogas_doshas(
             planets=chart['planets'],
             planet_houses=chart['planet_houses'],
-            houses=chart['houses']
+            houses=chart['houses'],
+            birth_datetime=birth_datetime,
         )
         
         # Get dashas
@@ -108,7 +110,14 @@ async def generate_complete_horoscope(request: HoroscopeRequest):
             planets=chart['planets'],
             ascendant_sign=ascendant_sign
         )
-        
+
+        # Generate remedies in the structured format expected by clients
+        remedies = remedies_engine.get_personalized_remedies(
+            chart_data=chart,
+            yogas_doshas=yogas_doshas,
+            ashtakavarga=ashtakavarga,
+        )
+
         # Generate comprehensive horoscope
         horoscope = horoscope_engine.generate_birth_horoscope(
             chart_data=chart,
@@ -117,6 +126,9 @@ async def generate_complete_horoscope(request: HoroscopeRequest):
             divisional_charts=div_charts,
             ashtakavarga=ashtakavarga
         )
+
+        # Attach remedies section to horoscope so other services can reuse it
+        horoscope['remedies'] = remedies
         
         return {
             "success": True,

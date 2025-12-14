@@ -1,7 +1,6 @@
-"""
-Yoga and Dosha Calculator
-"""
+"""Yoga and Dosha Calculator"""
 from typing import Dict, List, Set
+from datetime import datetime, timedelta
 
 
 class YogaDoshaCalculator:
@@ -338,11 +337,86 @@ class YogaDoshaCalculator:
                 'description': 'Pitra Dosha not present'
             }
     
+    def detect_sadesati(
+        self,
+        planets: Dict,
+        birth_datetime: datetime | None = None,
+    ) -> Dict:
+        """Approximate Shani Sadesati periods and current status.
+
+        This is a simplified implementation that:
+        - Uses Moon sign as the focus sign.
+        - Assumes a single Sadesati window from age ~27 to ~35.
+        - Splits that window into rising / peak / setting phases.
+        """
+        moon_sign = planets.get("Moon", {}).get("sign")
+
+        if not birth_datetime or not moon_sign:
+            return {
+                "is_sadesati": False,
+                "status": "Sadesati information not available",
+                "current_phase": None,
+                "periods": [],
+            }
+
+        # Define one long Sadesati period in adulthood
+        start = birth_datetime.replace(year=birth_datetime.year + 27)
+        end = birth_datetime.replace(year=birth_datetime.year + 35)
+
+        total_days = max((end - start).days, 1)
+        rising_end = start + timedelta(days=total_days / 3)
+        peak_end = start + timedelta(days=2 * total_days / 3)
+
+        today = datetime.now().date()
+        is_now = start.date() <= today <= end.date()
+
+        if is_now:
+            if today <= rising_end.date():
+                phase = "Rising"
+            elif today <= peak_end.date():
+                phase = "Peak"
+            else:
+                phase = "Setting"
+        else:
+            phase = None
+
+        periods = [
+            {
+                "start_date": start.date().isoformat(),
+                "end_date": rising_end.date().isoformat(),
+                "sign_name": moon_sign,
+                "type": "Rising",
+            },
+            {
+                "start_date": rising_end.date().isoformat(),
+                "end_date": peak_end.date().isoformat(),
+                "sign_name": moon_sign,
+                "type": "Peak",
+            },
+            {
+                "start_date": peak_end.date().isoformat(),
+                "end_date": end.date().isoformat(),
+                "sign_name": moon_sign,
+                "type": "Setting",
+            },
+        ]
+
+        return {
+            "is_sadesati": is_now,
+            "status": "Currently under Sadesati" if is_now else "Not under Sadesati",
+            "current_phase": phase,
+            "periods": periods,
+            "rising_phase_description": "Rising phase may bring gradual increase in responsibilities and karmic lessons.",
+            "peak_phase_description": "Peak phase can be intense with important life changes and restructuring.",
+            "setting_phase_description": "Setting phase usually eases the pressure and brings maturity from lessons learned.",
+        }
+
     def analyze_all_yogas_doshas(
         self,
         planets: Dict,
         planet_houses: Dict,
-        houses: Dict
+        houses: Dict,
+        birth_datetime: datetime | None = None,
     ) -> Dict:
         """
         Comprehensive analysis of all yogas and doshas
@@ -351,16 +425,17 @@ class YogaDoshaCalculator:
             Complete yoga and dosha report
         """
         return {
-            'yogas': {
-                'raj_yogas': self.detect_raj_yogas(planets, planet_houses, houses),
-                'dhana_yogas': self.detect_dhana_yogas(planets, planet_houses),
-                'mahapurusha_yogas': self.detect_mahapurusha_yogas(planets, planet_houses, houses)
+            "yogas": {
+                "raj_yogas": self.detect_raj_yogas(planets, planet_houses, houses),
+                "dhana_yogas": self.detect_dhana_yogas(planets, planet_houses),
+                "mahapurusha_yogas": self.detect_mahapurusha_yogas(planets, planet_houses, houses),
             },
-            'doshas': {
-                'kaal_sarp_dosha': self.detect_kaal_sarp_dosha(planets),
-                'mangal_dosha': self.detect_mangal_dosha(planets, planet_houses),
-                'pitra_dosha': self.detect_pitra_dosha(planets, planet_houses)
-            }
+            "doshas": {
+                "kaal_sarp_dosha": self.detect_kaal_sarp_dosha(planets),
+                "mangal_dosha": self.detect_mangal_dosha(planets, planet_houses),
+                "pitra_dosha": self.detect_pitra_dosha(planets, planet_houses),
+            },
+            "sadesati": self.detect_sadesati(planets, birth_datetime=birth_datetime),
         }
 
 
