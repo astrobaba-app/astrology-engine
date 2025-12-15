@@ -334,6 +334,67 @@ class TransitHoroscope:
         overall_rating += avg_score * 3
         final_rating = round(min(5, overall_rating))
         
+        # 6. Emotions & Mental State
+        emotions_score = 0
+        emotions_factors = []
+        
+        # Moon (mind, emotions) is primary indicator
+        moon_phase_val = self._get_moon_phase(transits['Sun']['longitude'], transits['Moon']['longitude'])
+        if moon_phase_val in ['New Moon', 'Full Moon']:
+            emotions_factors.append(f"{moon_phase_val} influences your emotional landscape")
+            emotions_score += 2
+        else:
+            emotions_factors.append(f"{moon_phase_val} supports balanced emotions")
+            emotions_score += 3
+        
+        # Moon nakshatra effects
+        moon_nakshatra = transits['Moon']['nakshatra']['name']
+        emotions_factors.append(f"Moon in {moon_nakshatra} influences your mental clarity")
+        
+        # Mercury (mind, intellect)
+        if mercury_house in [1, 5, 9]:
+            emotions_factors.append("Mercury enhances mental clarity and communication")
+            emotions_score += 3
+        elif transits['Mercury']['is_retrograde']:
+            emotions_factors.append("Mercury retrograde may cause communication challenges")
+            emotions_score += 1
+        else:
+            emotions_score += 2
+        
+        # Venus (happiness, peace)
+        if venus_house in [1, 4, 5]:
+            emotions_factors.append("Venus brings emotional contentment")
+            emotions_score += 2
+        
+        # 7. Travel & Movement
+        travel_score = 0
+        travel_factors = []
+        
+        # Jupiter direction is always favorable
+        jupiter_direction = self._calculate_lucky_elements(transits, zodiac_sign)['direction']
+        travel_factors.append(f"Favorable direction: {jupiter_direction}")
+        travel_score += 3
+        
+        # Mercury (short travels)
+        if mercury_house in [3, 9, 12]:
+            travel_factors.append("Good period for short trips and communication")
+            travel_score += 3
+        elif transits['Mercury']['is_retrograde']:
+            travel_factors.append("Mercury retrograde: double-check travel plans")
+            travel_score += 1
+        else:
+            travel_score += 2
+        
+        # Moon (journeys)
+        if moon_house in [3, 9, 12]:
+            travel_factors.append("Moon favors movement and travel")
+            travel_score += 2
+        
+        # Mars (energy for travel)
+        if mars_house in [3, 9, 11] and not transits['Mars']['is_retrograde']:
+            travel_factors.append("Energetic period for exploration")
+            travel_score += 2
+        
         return {
             'overall': {
                 'rating': final_rating,
@@ -363,6 +424,19 @@ class TransitHoroscope:
                 'prediction': ' '.join(finance_factors[:2]) if finance_factors else "Stable financial period",
                 'advice': self._get_finance_advice(finance_score, transits),
                 'factors': finance_factors
+            },
+            'emotions_mind': {
+                'rating': min(5, round(emotions_score / 2.0)),
+                'summary': ' '.join(emotions_factors[:2]) if emotions_factors else "Balanced emotional state",
+                'moon_phase': moon_phase_val,
+                'moon_nakshatra': moon_nakshatra,
+                'advice': "Practice mindfulness and meditation for emotional balance"
+            },
+            'travel_movement': {
+                'rating': min(5, round(travel_score / 2.0)),
+                'summary': ' '.join(travel_factors[:2]) if travel_factors else "Normal travel prospects",
+                'favorable_direction': jupiter_direction,
+                'advice': "Plan travels during favorable planetary hours for best results"
             }
         }
     
@@ -697,6 +771,12 @@ class TransitHoroscope:
         # Finance weekly
         finance_analysis = self._analyze_weekly_finance(sign, start, mid, end)
         
+        # Emotions & Mind weekly
+        emotions_analysis = self._analyze_weekly_emotions(sign, start, mid, end)
+        
+        # Travel & Movement weekly
+        travel_analysis = self._analyze_weekly_travel(sign, start, mid, end)
+        
         return {
             'overview': {
                 'summary': weekly_trend,
@@ -707,6 +787,8 @@ class TransitHoroscope:
             'love': love_analysis,
             'health': health_analysis,
             'finance': finance_analysis,
+            'emotions_mind': emotions_analysis,
+            'travel_movement': travel_analysis,
             'days_breakdown': self._get_daily_breakdown_for_week(sign, start_date, start)
         }
     
@@ -828,6 +910,65 @@ class TransitHoroscope:
             'prediction': prediction,
             'opportunities': 'Mid-week favors financial discussions',
             'caution': 'Avoid impulsive spending on weekends'
+        }
+    
+    def _analyze_weekly_emotions(self, sign: str, start: Dict, mid: Dict, end: Dict) -> Dict:
+        """Weekly emotions and mental state analysis"""
+        sign_num = self.SIGNS.index(sign)
+        
+        # Moon transitions through week
+        moon_start_nakshatra = start['Moon']['nakshatra']['name']
+        moon_end_nakshatra = end['Moon']['nakshatra']['name']
+        
+        # Mercury for mental clarity
+        mercury_house = ((self.SIGNS.index(start['Mercury']['sign']) - sign_num) % 12) + 1
+        
+        if mercury_house in [1, 5, 9] and not start['Mercury'].get('is_retrograde'):
+            summary = f"Week of mental clarity and emotional balance. Moon transits from {moon_start_nakshatra} to {moon_end_nakshatra} support inner harmony."
+            rating = 4
+        elif start['Mercury'].get('is_retrograde'):
+            summary = "Mercury retrograde may cause mental restlessness. Practice meditation and mindfulness for emotional stability."
+            rating = 2
+        else:
+            summary = f"Balanced emotional week. Moon's movement through {moon_start_nakshatra} supports steady mindset. Regular meditation recommended."
+            rating = 3
+        
+        return {
+            'rating': rating,
+            'summary': summary,
+            'advice': 'Practice mindfulness and stress management techniques',
+            'best_days_for_clarity': 'Monday, Wednesday, Friday'
+        }
+    
+    def _analyze_weekly_travel(self, sign: str, start: Dict, mid: Dict, end: Dict) -> Dict:
+        """Weekly travel and movement analysis"""
+        sign_num = self.SIGNS.index(sign)
+        
+        # Mercury (short travels) and Jupiter (long travels)
+        mercury_house = ((self.SIGNS.index(start['Mercury']['sign']) - sign_num) % 12) + 1
+        jupiter_house = ((self.SIGNS.index(start['Jupiter']['sign']) - sign_num) % 12) + 1
+        
+        # Calculate favorable direction
+        jupiter_sign_num = self.SIGNS.index(start['Jupiter']['sign'])
+        directions = ['East', 'South-East', 'South', 'South-West', 'West', 'North-West', 'North', 'North-East']
+        favorable_direction = directions[jupiter_sign_num % 8]
+        
+        if mercury_house in [3, 9, 12] and not start['Mercury'].get('is_retrograde'):
+            summary = f"Excellent week for travel and movement. Favorable direction: {favorable_direction}. Plan short trips mid-week."
+            rating = 4
+        elif start['Mercury'].get('is_retrograde'):
+            summary = f"Mercury retrograde advises caution in travel. Double-check plans. Favorable direction if traveling: {favorable_direction}."
+            rating = 2
+        else:
+            summary = f"Normal travel prospects. Favorable direction: {favorable_direction}. Weekend better for journeys."
+            rating = 3
+        
+        return {
+            'rating': rating,
+            'summary': summary,
+            'favorable_direction': favorable_direction,
+            'best_travel_days': 'Thursday, Friday',
+            'advice': 'Check planetary hours for optimal travel timing'
         }
     
     def _calculate_week_rating(self, sign: str, start: Dict, mid: Dict, end: Dict) -> int:
@@ -1020,6 +1161,8 @@ class TransitHoroscope:
         love_monthly = self._analyze_monthly_love(sign, start, mid, end)
         health_monthly = self._analyze_monthly_health(sign, start, mid, end)
         finance_monthly = self._analyze_monthly_finance(sign, start, mid, end)
+        emotions_monthly = self._analyze_monthly_emotions(sign, start, mid, end, month_name)
+        travel_monthly = self._analyze_monthly_travel(sign, start, mid, end)
         
         return {
             'overview': monthly_overview,
@@ -1030,6 +1173,8 @@ class TransitHoroscope:
             'love': love_monthly,
             'health': health_monthly,
             'finance': finance_monthly,
+            'emotions_mind': emotions_monthly,
+            'travel_movement': travel_monthly,
             'weekly_breakdown': {
                 'week_1': 'Foundation setting week. Plan and initiate.',
                 'week_2': 'Action week. Execute plans with confidence.',
@@ -1290,6 +1435,85 @@ class TransitHoroscope:
             'best_investment_period': 'After 15th of the month' if rating >= 3 else 'Wait for next month'
         }
     
+    def _analyze_monthly_emotions(self, sign: str, start: Dict, mid: Dict, end: Dict, month_name: str) -> Dict:
+        """Monthly emotions and mental state analysis"""
+        sign_num = self.SIGNS.index(sign)
+        
+        # Moon cycles through month - mental and emotional indicator
+        moon_start_nak = start['Moon']['nakshatra']['name']
+        moon_mid_nak = mid['Moon']['nakshatra']['name']
+        moon_end_nak = end['Moon']['nakshatra']['name']
+        
+        # Mercury for mental clarity
+        mercury_house = ((self.SIGNS.index(start['Mercury']['sign']) - sign_num) % 12) + 1
+        mercury_retrograde = start['Mercury'].get('is_retrograde') or mid['Mercury'].get('is_retrograde')
+        
+        # Moon house analysis
+        moon_mid_house = ((self.SIGNS.index(mid['Moon']['sign']) - sign_num) % 12) + 1
+        
+        if mercury_retrograde:
+            summary = f"{month_name} brings mental restlessness due to Mercury retrograde. Practice meditation and avoid major life decisions. Moon transitions through {moon_start_nak}, {moon_mid_nak}, and {moon_end_nak} nakshatras."
+            rating = 2
+        elif mercury_house in [1, 5, 9] and moon_mid_house in [1, 4, 5]:
+            summary = f"Excellent mental and emotional month! Mercury supports clarity while Moon's journey through {moon_mid_nak} brings inner peace. Good time for self-reflection and meditation practices."
+            rating = 5
+        elif moon_mid_house in [6, 8, 12]:
+            summary = f"Emotional challenges possible mid-month. Moon in {moon_mid_nak} nakshatra requires extra self-care. Practice stress management and seek support when needed."
+            rating = 3
+        else:
+            summary = f"Balanced emotional month for {month_name}. Regular lunar cycles support steady mental state. Moon's movement through various nakshatras brings mixed but manageable emotions."
+            rating = 4
+        
+        return {
+            'rating': rating,
+            'summary': summary,
+            'moon_nakshatras': [moon_start_nak, moon_mid_nak, moon_end_nak],
+            'advice': 'Practice daily meditation, maintain sleep routine, and journal your emotions',
+            'best_days': 'Full Moon and New Moon days especially powerful for emotional release'
+        }
+    
+    def _analyze_monthly_travel(self, sign: str, start: Dict, mid: Dict, end: Dict) -> Dict:
+        """Monthly travel and movement analysis"""
+        sign_num = self.SIGNS.index(sign)
+        
+        # Mercury (short travels, communication)
+        mercury_house = ((self.SIGNS.index(start['Mercury']['sign']) - sign_num) % 12) + 1
+        mercury_retrograde = start['Mercury'].get('is_retrograde') or mid['Mercury'].get('is_retrograde')
+        
+        # Jupiter (long travels, fortune)
+        jupiter_house = ((self.SIGNS.index(start['Jupiter']['sign']) - sign_num) % 12) + 1
+        jupiter_sign_num = self.SIGNS.index(start['Jupiter']['sign'])
+        
+        # Calculate favorable direction
+        directions = ['East', 'South-East', 'South', 'South-West', 'West', 'North-West', 'North', 'North-East']
+        favorable_direction = directions[jupiter_sign_num % 8]
+        
+        if mercury_retrograde:
+            summary = f"Mercury retrograde advises caution with travel plans. Expect delays and changes. Double-check all bookings. Favorable direction: {favorable_direction}. Best travel period: last week of month."
+            rating = 2
+            best_period = 'Last week after Mercury stations direct'
+        elif mercury_house in [3, 9, 12] and jupiter_house in [9, 12]:
+            summary = f"Excellent month for travel and exploration! Both short trips and long journeys favored. Travel in {favorable_direction} direction especially auspicious. Mid-month ideal for planning adventures."
+            rating = 5
+            best_period = 'Mid-month (15th-22nd) most favorable'
+        elif jupiter_house in [3, 9]:
+            summary = f"Good travel prospects. Jupiter supports journeys in {favorable_direction} direction. Plan trips during first and third weeks. Spiritual or educational travels highly beneficial."
+            rating = 4
+            best_period = 'First and third weeks best for journeys'
+        else:
+            summary = f"Normal travel month. Local movements favored over long trips. {favorable_direction} direction remains auspicious. Weekend travels more successful than weekday."
+            rating = 3
+            best_period = 'Weekends better for travel'
+        
+        return {
+            'rating': rating,
+            'summary': summary,
+            'favorable_direction': favorable_direction,
+            'best_travel_period': best_period,
+            'advice': 'Check planetary hours (hora) before starting journeys for maximum auspiciousness',
+            'travel_type': 'Spiritual and educational travels especially blessed' if jupiter_house in [9, 12] else 'Business travels favored' if mercury_house in [3, 10] else 'Leisure travels enjoyable'
+        }
+    
     def _get_best_dates_of_month_professional(self, start_date: datetime, sign: str, transits: Dict) -> List[Dict]:
         """Get best dates with detailed reasoning"""
         best_dates = []
@@ -1407,6 +1631,8 @@ class TransitHoroscope:
         love_yearly = self._analyze_yearly_love(sign, q1, q2, q3, q4, year)
         health_yearly = self._analyze_yearly_health(sign, q1, q2, q3, q4, year)
         finance_yearly = self._analyze_yearly_finance(sign, q1, q2, q3, q4, year)
+        emotions_yearly = self._analyze_yearly_emotions(sign, q1, q2, q3, q4, year)
+        travel_yearly = self._analyze_yearly_travel(sign, q1, q2, q3, q4, year)
         
         return {
             'overview': year_overview,
@@ -1416,6 +1642,8 @@ class TransitHoroscope:
             'health_wellness': health_yearly,
             'finance_wealth': finance_yearly,
             'spiritual_growth': self._analyze_yearly_spirituality(sign, q1, q2, q3, q4),
+            'emotions_mind': emotions_yearly,
+            'travel_movement': travel_yearly,
             'major_themes': self._identify_yearly_themes(sign, q1, q2, q3, q4, year)
         }
     
@@ -1726,6 +1954,130 @@ class TransitHoroscope:
                 'benefits': 'Stress management and emotional balance',
                 'practices': ['Weekend spiritual activities', 'Nature connection', 'Gratitude journaling']
             }
+    
+    def _analyze_yearly_emotions(self, sign: str, q1: Dict, q2: Dict, q3: Dict, q4: Dict, year: int) -> Dict:
+        """Yearly emotions and mental state predictions"""
+        sign_num = self.SIGNS.index(sign)
+        
+        # Mercury (mind, intellect) across quarters
+        mercury_positions = []
+        mercury_retrogrades = 0
+        for q in [q1, q2, q3, q4]:
+            mercury_house = ((self.SIGNS.index(q['Mercury']['sign']) - sign_num) % 12) + 1
+            mercury_positions.append(mercury_house)
+            if q['Mercury'].get('is_retrograde'):
+                mercury_retrogrades += 1
+        
+        # Moon nodes (Rahu-Ketu) for emotional evolution
+        rahu_house = ((self.SIGNS.index(q1['Rahu']['sign']) - sign_num) % 12) + 1
+        ketu_house = ((self.SIGNS.index(q1['Ketu']['sign']) - sign_num) % 12) + 1
+        
+        favorable_count = sum(1 for h in mercury_positions if h in [1, 5, 9])
+        
+        if favorable_count >= 3:
+            summary = f"{year} brings exceptional mental clarity and emotional stability. Your mind is sharp, decisions are sound, and inner peace prevails throughout the year."
+            rating = 5
+            best_quarters = ['Q2', 'Q3', 'Q4']
+        elif mercury_retrogrades >= 2:
+            summary = f"Year of introspection with multiple Mercury retrogrades. Expect periods of mental review and emotional processing. Use these times for meditation and self-discovery."
+            rating = 3
+            best_quarters = ['Q1', 'Q4']
+        elif rahu_house in [1, 4, 8] or ketu_house in [1, 4, 8]:
+            summary = f"Transformative year emotionally. Rahu-Ketu axis brings deep psychological insights. Some emotional turbulence leads to profound personal growth."
+            rating = 3
+            best_quarters = ['Q2', 'Q4']
+        else:
+            summary = f"Balanced emotional year with steady mental state. Regular meditation and mindfulness practices enhance overall wellbeing throughout {year}."
+            rating = 4
+            best_quarters = ['Q1', 'Q2', 'Q3']
+        
+        return {
+            'rating': rating,
+            'summary': summary,
+            'best_quarters_for_clarity': best_quarters,
+            'challenging_periods': 'Mercury retrograde periods' if mercury_retrogrades > 0 else 'None significant',
+            'practices': ['Daily meditation 15-20 minutes', 'Journaling emotions weekly', 'Therapy or counseling if needed', 'Yoga for mind-body balance'],
+            'advice': 'Maintain consistent sleep schedule, limit screen time before bed, and practice gratitude daily for optimal mental health'
+        }
+    
+    def _analyze_yearly_travel(self, sign: str, q1: Dict, q2: Dict, q3: Dict, q4: Dict, year: int) -> Dict:
+        """Yearly travel and movement predictions"""
+        sign_num = self.SIGNS.index(sign)
+        
+        # Jupiter (long distance travel, pilgrimages)
+        jupiter_positions = []
+        for q in [q1, q2, q3, q4]:
+            jupiter_house = ((self.SIGNS.index(q['Jupiter']['sign']) - sign_num) % 12) + 1
+            jupiter_positions.append(jupiter_house)
+        
+        # Mercury (short trips, communication travels)
+        mercury_positions = []
+        mercury_retrogrades = []
+        for i, q in enumerate([q1, q2, q3, q4], 1):
+            mercury_house = ((self.SIGNS.index(q['Mercury']['sign']) - sign_num) % 12) + 1
+            mercury_positions.append(mercury_house)
+            if q['Mercury'].get('is_retrograde'):
+                mercury_retrogrades.append(f'Q{i}')
+        
+        # Calculate favorable direction from Jupiter's position
+        jupiter_sign_num = self.SIGNS.index(q1['Jupiter']['sign'])
+        directions = ['East', 'South-East', 'South', 'South-West', 'West', 'North-West', 'North', 'North-East']
+        favorable_direction = directions[jupiter_sign_num % 8]
+        
+        # Rahu in 3rd, 9th, or 12th - foreign travel indicator
+        rahu_house = ((self.SIGNS.index(q1['Rahu']['sign']) - sign_num) % 12) + 1
+        
+        favorable_jupiter = sum(1 for h in jupiter_positions if h in [3, 9, 12])
+        favorable_mercury = sum(1 for h in mercury_positions if h in [3, 9, 12])
+        
+        if favorable_jupiter >= 3 or rahu_house in [9, 12]:
+            summary = f"Exceptional travel year! Jupiter blesses long journeys and international travel. {favorable_direction} direction especially auspicious. Spiritual and educational travels bring lasting benefits."
+            rating = 5
+            travel_type = 'International and long-distance journeys highly favored'
+            best_quarters = ['Q2', 'Q3', 'Q4']
+        elif favorable_mercury >= 3:
+            summary = f"Active year for short trips and local exploration. Frequent business or leisure travels. {favorable_direction} direction remains favorable throughout {year}."
+            rating = 4
+            travel_type = 'Short trips and domestic travel frequent'
+            best_quarters = ['Q1', 'Q2', 'Q3']
+        elif len(mercury_retrogrades) >= 2:
+            summary = f"Travel with caution during Mercury retrograde periods ({', '.join(mercury_retrogrades)}). Plan well in advance, expect delays. {favorable_direction} direction auspicious."
+            rating = 2
+            travel_type = 'Local travel better than long journeys'
+            best_quarters = [f'Q{i}' for i in range(1, 5) if f'Q{i}' not in mercury_retrogrades]
+        else:
+            summary = f"Moderate travel year. Some good opportunities for journeys. Best travel direction: {favorable_direction}. Plan major trips during Jupiter-favorable quarters."
+            rating = 3
+            travel_type = 'Mix of business and leisure travel'
+            best_quarters = ['Q2', 'Q4']
+        
+        return {
+            'rating': rating,
+            'summary': summary,
+            'favorable_direction': favorable_direction,
+            'best_quarters': best_quarters,
+            'travel_type': travel_type,
+            'best_months': self._get_best_travel_months(q1, q2, q3, q4),
+            'caution_periods': f'Mercury retrograde in {", ".join(mercury_retrogrades)}' if mercury_retrogrades else 'No major caution periods',
+            'advice': 'Book travels on auspicious days (Thursdays especially). Carry protective gemstones. Start journeys during favorable planetary hours.'
+        }
+    
+    def _get_best_travel_months(self, q1: Dict, q2: Dict, q3: Dict, q4: Dict) -> List[str]:
+        """Get best months for travel based on quarterly analysis"""
+        months = []
+        quarters_months = [
+            ['February', 'March'],
+            ['May', 'June'],
+            ['August', 'September'],
+            ['November', 'December']
+        ]
+        
+        # Simple heuristic: favor quarters where Jupiter or Mercury is not retrograde
+        for i, q in enumerate([q1, q2, q3, q4]):
+            if not q['Jupiter'].get('is_retrograde') and not q['Mercury'].get('is_retrograde'):
+                months.extend(quarters_months[i])
+        
+        return months[:4] if months else ['April', 'September', 'November']
     
     def _identify_yearly_themes(self, sign: str, q1: Dict, q2: Dict, q3: Dict, q4: Dict, year: int) -> List[str]:
         """Identify major themes for the year"""
