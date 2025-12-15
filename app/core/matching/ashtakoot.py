@@ -155,13 +155,29 @@ class AshtakootMatching:
         else:
             points = 0
         
+        if points == 2:
+            relation_detail = "Strong mutual attraction between both signs"
+        elif points == 1:
+            if male_attracts_female and not female_attracts_male:
+                relation_detail = f"{male_moon_sign} attracts {female_moon_sign}, but attraction is one-sided"
+            elif female_attracts_male and not male_attracts_female:
+                relation_detail = f"{female_moon_sign} attracts {male_moon_sign}, but attraction is one-sided"
+            else:
+                relation_detail = "Partial attraction between the signs"
+        else:
+            relation_detail = "Low or no natural attraction between the signs"
+
         return {
             'name': 'Vashya Kuta',
+            # For UI: show each partner's Moon sign
+            'male': male_moon_sign,
+            'female': female_moon_sign,
             'male_attracts_female': male_attracts_female,
             'female_attracts_male': female_attracts_male,
             'points': points,
             'max_points': 2,
-            'description': 'Mutual attraction and control'
+            'description': 'Mutual attraction and control',
+            'detail': relation_detail,
         }
     
     def calculate_tara_kuta(self, male_nakshatra_num: int, female_nakshatra_num: int) -> Dict:
@@ -179,9 +195,46 @@ class AshtakootMatching:
             points = 1.5
         else:  # remainder == 0 (9)
             points = 3
+
+        # Map indices back to nakshatra names so UI can show
+        # each partner's birth star in the Tara Kuta row.
+        nakshatra_names = [
+            'Ashwini',
+            'Bharani',
+            'Krittika',
+            'Rohini',
+            'Mrigashira',
+            'Ardra',
+            'Punarvasu',
+            'Pushya',
+            'Ashlesha',
+            'Magha',
+            'Purva Phalguni',
+            'Uttara Phalguni',
+            'Hasta',
+            'Chitra',
+            'Swati',
+            'Vishakha',
+            'Anuradha',
+            'Jyeshtha',
+            'Mula',
+            'Purva Ashadha',
+            'Uttara Ashadha',
+            'Shravana',
+            'Dhanishta',
+            'Shatabhisha',
+            'Purva Bhadrapada',
+            'Uttara Bhadrapada',
+            'Revati',
+        ]
+
+        male_nakshatra = nakshatra_names[male_nakshatra_num] if 0 <= male_nakshatra_num < len(nakshatra_names) else 'Unknown'
+        female_nakshatra = nakshatra_names[female_nakshatra_num] if 0 <= female_nakshatra_num < len(nakshatra_names) else 'Unknown'
         
         return {
             'name': 'Tara Kuta',
+            'male': male_nakshatra,
+            'female': female_nakshatra,
             'count': count,
             'tara_number': remainder if remainder != 0 else 9,
             'points': points,
@@ -295,13 +348,32 @@ class AshtakootMatching:
             points = 0
         else:
             points = 7
-        
+
+        signs = [
+            'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
+            'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+        ]
+
+        # Classify Bhakoot relationship type for richer UI text
+        if diff in [1, 11]:
+            relation_detail = "2/12 Bhakoot relationship – can give financial and stability challenges"
+        elif diff in [5, 7]:
+            relation_detail = "5/9 Bhakoot relationship – may cause dharma and life-path mismatch"
+        elif diff == 6:
+            relation_detail = "6/8 Bhakoot relationship – associated with health and obstacle issues"
+        else:
+            relation_detail = "Favourable Bhakoot relationship between the Moon signs"
+
         return {
             'name': 'Bhakoot Kuta',
+            # For UI: show each partner's Moon sign
+            'male': signs[male_moon_sign_num],
+            'female': signs[female_moon_sign_num],
             'sign_difference': diff,
             'points': points,
             'max_points': 7,
-            'description': 'Love and prosperity in relationship'
+            'description': 'Love and prosperity in relationship',
+            'detail': relation_detail,
         }
     
     def calculate_nadi_kuta(self, male_nakshatra_num: int, female_nakshatra_num: int) -> Dict:

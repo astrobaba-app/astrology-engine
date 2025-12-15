@@ -237,9 +237,19 @@ class YogaDoshaCalculator:
         Returns:
             Mangal Dosha information
         """
+        def _ordinal(n: int) -> str:
+            suffix = "th"
+            if not isinstance(n, int):
+                return str(n)
+            if 11 <= n % 100 <= 13:
+                suffix = "th"
+            else:
+                suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+            return f"{n}{suffix}"
+
         mars_house = planet_houses.get('Mars')
         dosha_houses = [1, 2, 4, 7, 8, 12]
-        
+
         if mars_house in dosha_houses:
             # Check severity
             if mars_house in [1, 7, 8]:
@@ -263,7 +273,31 @@ class YogaDoshaCalculator:
                 aspect_houses = [(jupiter_house + 4) % 12, (jupiter_house + 6) % 12, (jupiter_house + 8) % 12]
                 if mars_house in aspect_houses or 7 in aspect_houses:
                     cancellations.append('Jupiter aspect on Mars or 7th house')
-            
+
+            # Build structured info for UI (for Lagna Chart "Based on Aspects/house")
+            # Mars standard aspects: 4th, 7th, and 8th from its own position
+            def _house_from(base: int, offset: int) -> int:
+                # houses are 1-12 cyclic
+                return ((base - 1 + offset) % 12) + 1
+
+            mars_aspect_houses = [
+                _house_from(mars_house, 3),  # 4th from Mars
+                _house_from(mars_house, 6),  # 7th from Mars
+                _house_from(mars_house, 7),  # 8th from Mars
+            ]
+
+            aspects = []
+            for h in mars_aspect_houses:
+                label = _ordinal(h)
+                if h == 7:
+                    aspects.append(f"Mars aspects {label} house (marriage / partnership house)")
+                else:
+                    aspects.append(f"Mars aspects {label} house")
+
+            houses_info = [
+                f"Mars in {_ordinal(mars_house)} house (Mangal house)"
+            ]
+
             return {
                 'present': True,
                 'mars_house': mars_house,
@@ -272,6 +306,9 @@ class YogaDoshaCalculator:
                 'effects': 'Delays or problems in marriage, conflicts with spouse',
                 'cancellations': cancellations,
                 'is_cancelled': len(cancellations) > 0,
+                # New structured lists for UI consumption
+                'aspects': aspects,
+                'houses': houses_info,
                 'remedies': [
                     'Marry another Manglik person',
                     'Worship Lord Hanuman on Tuesdays',
@@ -281,9 +318,28 @@ class YogaDoshaCalculator:
                 ]
             }
         else:
+            # When Mars is not in a classical Mangal house, still
+            # provide positive, structured info so the UI never
+            # shows empty bullets.
+            houses_info: List[str] = []
+            aspects: List[str] = []
+
+            if mars_house:
+                houses_info.append(
+                    f"Mars in {_ordinal(mars_house)} house (not a classical Mangal house)"
+                )
+                aspects.append(
+                    "Mars does not strongly afflict key marriage houses (1st, 2nd, 4th, 7th, 8th, 12th)"
+                )
+            else:
+                houses_info.append("Mars house position not available in chart data")
+                aspects.append("Mars placement data is incomplete, Mangal Dosha not detected")
+
             return {
                 'present': False,
-                'description': 'Mangal Dosha not present'
+                'description': 'Mangal Dosha not present',
+                'aspects': aspects,
+                'houses': houses_info,
             }
     
     def detect_pitra_dosha(self, planets: Dict, planet_houses: Dict) -> Dict:
