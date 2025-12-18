@@ -51,9 +51,6 @@ htmlcov/
 logs/
 *.log
 
-# Swiss Ephemeris Data (large files - download separately)
-ephemeris_data/*.se1
-ephemeris_data/*.eph
 
 # OS
 .DS_Store
@@ -66,4 +63,3 @@ dmypy.json
 
 # Ruff
 .ruff_cache/
-README.md
