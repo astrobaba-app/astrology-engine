@@ -21,13 +21,13 @@ class Settings(BaseSettings):
     API_RELOAD: bool = False
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: List[str] = ["https://api.staging.graho.in", "https://staging.graho.in", "http://localhost:3000", "http://localhost:3001", "http://localhost:6001"]
     
     # Swiss Ephemeris
     EPHEMERIS_PATH: str = "./ephemeris_data"
     
     # Security
-    SECRET_KEY: str = "change-this-in-production"
+    SECRET_KEY: str = "herhsethj3QJ8DhsrtkpfHjstrjMEI0Lwehethjtrj"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
